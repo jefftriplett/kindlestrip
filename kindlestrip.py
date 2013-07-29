@@ -135,7 +135,7 @@ class SectionStripper(object):
         if srcs_secnum == 0xffffffff or srcs_cnt == 0:
             raise StripException("File doesn't contain the sources section.")
 
-        print "Found SRCS section number %d, and count %d" % (srcs_secnum, srcs_cnt)
+        print("Found SRCS section number {0}, and count {1}".format(srcs_secnum, srcs_cnt))
         # find its offset and length
         next = srcs_secnum + srcs_cnt
         srcs_offset, flgval = struct.unpack_from('>2L', datain, 78 + (srcs_secnum * 8))
@@ -143,7 +143,7 @@ class SectionStripper(object):
         srcs_length = next_offset - srcs_offset
         if datain[srcs_offset:srcs_offset + 4] != 'SRCS':
             raise StripException("SRCS section num does not point to SRCS.")
-        print "   beginning at offset %0x and ending at offset %0x" % (srcs_offset, srcs_length)
+        print("   beginning at offset {0} and ending at offset {1}".format(srcs_offset, srcs_length))
 
         # it appears bytes 68-71 always contain (2*num_sections) + 1
         # this is not documented anyplace at all but it appears to be some sort of next
@@ -212,14 +212,13 @@ class SectionStripper(object):
 
 if __name__ == "__main__":
     sys.stdout = Unbuffered(sys.stdout)
-    print ('KindleStrip v%(__version__)s. '
-       'Written 2010-2012 by Paul Durrant and Kevin Hendricks.' % globals())
+    print('KindleStrip v{0}. Written 2010-2012 by Paul Durrant and Kevin Hendricks.'.format(__version__))
     if len(sys.argv) < 3 or len(sys.argv) > 4:
-        print "Strips the penultimate record from Mobipocket ebooks"
-        print "For ebooks generated using KindleGen 1.1 and later that add the source"
-        print "Usage:"
-        print "    %s <infile> <outfile> <strippeddatafile>" % sys.argv[0]
-        print "<strippeddatafile> is optional."
+        print("Strips the penultimate record from Mobipocket ebooks")
+        print("For ebooks generated using KindleGen 1.1 and later that add the source")
+        print("Usage:")
+        print("    {0} <infile> <outfile> <strippeddatafile>".format(sys.argv[0]))
+        print("<strippeddatafile> is optional.")
         sys.exit(1)
     else:
         infile = sys.argv[1]
@@ -228,10 +227,10 @@ if __name__ == "__main__":
         try:
             strippedFile = SectionStripper(data_file)
             file(outfile, 'wb').write(strippedFile.getResult())
-            print "Header Bytes: " + binascii.b2a_hex(strippedFile.getHeader())
+            print("Header Bytes: {0}".format(binascii.b2a_hex(strippedFile.getHeader())))
             if len(sys.argv) == 4:
                 file(sys.argv[3], 'wb').write(strippedFile.getStrippedData())
-        except StripException, e:
-            print "Error: %s" % e
+        except StripException as e:
+            print("Error: {0}".format(e))
             sys.exit(1)
     sys.exit(0)

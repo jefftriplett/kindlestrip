@@ -15,13 +15,14 @@ setup(
     version='1.34.0',
     url='https://github.com/jefftriplett/kindlestrip',
     license='Unlicense',
-    description='Strips the penultimate record from a Mobipocket file.',
+    description='Strips the penultimate record from Mobipocket ebooks',
     long_description=__doc__,
     author='Paul Durrant',
     author_email='',
+    maintainer='Jeff Triplett',
+    maintainer_email='jeff.triplett@gmail.com',
     packages=find_packages(),
-    package_data={
-    },
+    package_data={},
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Web Environment',
