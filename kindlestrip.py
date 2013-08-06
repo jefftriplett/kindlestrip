@@ -47,8 +47,9 @@
 #  1.32 - removes the SRCS section and its entry, now updates metadata 121 if needed
 #  1.33 - now uses and modifies mobiheader SRCS and CNT
 #  1.34 - added credit for Kevin Hendricks
+#  1.35 - fixed bug when more than one compilation (SRCS/CMET) records
 
-__version__ = '1.34.0'
+__version__ = '1.34'
 
 import sys
 import struct
@@ -128,8 +129,8 @@ class SectionStripper(object):
         self.num_sections, = struct.unpack('>H', datain[76:78])
 
         # get mobiheader and check SRCS section number and count
-        offset0, flgval0 = struct.unpack_from('>2L', datain, 78)
-        offset1, flgval1 = struct.unpack_from('>2L', datain, 86)
+        offset0, = struct.unpack_from('>L', datain, 78)
+        offset1, = struct.unpack_from('>L', datain, 86)
         mobiheader = datain[offset0:offset1]
         srcs_secnum, srcs_cnt = struct.unpack_from('>2L', mobiheader, 0xe0)
         if srcs_secnum == 0xffffffff or srcs_cnt == 0:
@@ -177,7 +178,7 @@ class SectionStripper(object):
         self.data_file += '\0' * (first_offset - len(self.data_file))
 
         # now finally add on every thing up to the original src_offset
-        self.data_file += datain[first_offset + 8: srcs_offset]
+        self.data_file += datain[offset0:srcs_offset]
 
         # and everything afterwards
         self.data_file += datain[srcs_offset + srcs_length:]
@@ -198,7 +199,7 @@ class SectionStripper(object):
         # if K8 mobi, handle metadata 121 in old mobiheader
         mobiheader = self.updateEXTH121(srcs_secnum, srcs_cnt, mobiheader)
         self.data_file = self.data_file[0:offset0] + mobiheader + self.data_file[offset1:]
-        print "done"
+        print("done")
 
     def getResult(self):
         return self.data_file
@@ -214,7 +215,7 @@ if __name__ == "__main__":
     sys.stdout = Unbuffered(sys.stdout)
     print('KindleStrip v{0}. Written 2010-2012 by Paul Durrant and Kevin Hendricks.'.format(__version__))
     if len(sys.argv) < 3 or len(sys.argv) > 4:
-        print("Strips the penultimate record from Mobipocket ebooks")
+        print("Strips the Sources record from Mobipocket ebooks")
         print("For ebooks generated using KindleGen 1.1 and later that add the source")
         print("Usage:")
         print("    {0} <infile> <outfile> <strippeddatafile>".format(sys.argv[0]))
