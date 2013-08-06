@@ -49,7 +49,7 @@
 #  1.34 - added credit for Kevin Hendricks
 #  1.35 - fixed bug when more than one compilation (SRCS/CMET) records
 
-__version__ = '1.34.0'
+__version__ = '1.35.0'
 
 import sys
 import struct
