@@ -22,6 +22,7 @@ setup(
     maintainer='Jeff Triplett',
     maintainer_email='jeff.triplett@gmail.com',
     packages=find_packages(),
+    py_modules=['kindlestrip'],
     package_data={},
     classifiers=[
         'Development Status :: 5 - Production/Stable',
@@ -32,4 +33,9 @@ setup(
         'Programming Language :: Python',
         'Topic :: Utilities'
     ],
+    entry_points={
+        'console_scripts': [
+            'kindlestrip = kindlestrip:main',
+        ]
+    },
 )
