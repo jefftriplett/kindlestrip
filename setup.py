@@ -12,7 +12,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='kindlestrip',
-    version='1.36.0',
+    version='1.35.0',
     url='https://github.com/jefftriplett/kindlestrip',
     license='Unlicense',
     description='Strips the penultimate record from Mobipocket ebooks',

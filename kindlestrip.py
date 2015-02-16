@@ -45,7 +45,7 @@
 #  1.31 - To get K8 style mobis to work properly, need to replace SRCS section with section of 0 length
 #  1.35a- Backport of fixes from 1.32-1.35 to 1.31 to workaround latest Kindlegen changes
 
-__version__ = '1.36.0'
+__version__ = '1.35.0'
 
 import sys
 import os
