@@ -369,7 +369,12 @@ def main(argv=utf8_argv()):
         return 1
     return 0
 
-if __name__ == '__main__':
+
+def cli_main():
     add_cp65001_codec()
     set_utf8_default_encoding()
     sys.exit(main())
+
+
+if __name__ == '__main__':
+    cli_main()
