@@ -47,14 +47,13 @@
 
 __version__ = '1.35.0'
 
-import sys
-import os
-import struct
-import binascii
-
+import codecs
 import getopt
 import locale
-import codecs
+import os
+import struct
+import sys
+
 
 iswindows = sys.platform.startswith('win')
 
