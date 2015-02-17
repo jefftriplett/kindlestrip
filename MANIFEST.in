@@ -2,5 +2,9 @@ include AUTHORS.md
 include LICENSE
 include README.rst
 
+exclude .bumpversion.cfg
+exclude requirements.txt
+exclude tasks.py
+
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
