@@ -1,2 +1,4 @@
+bumpversion
+check-manifest
 invoke
 wheel
