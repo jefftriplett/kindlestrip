@@ -39,6 +39,7 @@ setup(
     entry_points={
         'console_scripts': [
             'kindlestrip = kindlestrip:main',
+            'kindlestrip3 = kindlestrip_py3:main',
         ]
     },
 )
