@@ -118,7 +118,7 @@ def utf8_argv():
         argvencoding = sys.stdin.encoding
         if argvencoding == None:
             argvencoding = sys.getfilesystemencoding()
-        if argvencoding == None:
+        if argvencoding is None:
             argvencoding = 'utf-8'
         for arg in sys.argv:
             if type(arg) == unicode:
@@ -187,16 +187,11 @@ class StripException(Exception):
 
 
 def patchdata(datain, off, new):
-    dout=[]
-    dout.append(datain[:off])
-    dout.append(new)
-    dout.append(datain[off+len(new):])
+    dout = [datain[:off], new, datain[off+len(new):]]
     return ''.join(dout)
 
 def joindata(datain, new):
-    dout=[]
-    dout.append(datain)
-    dout.append(new)
+    dout = [datain, new]
     return ''.join(dout)
 
 
