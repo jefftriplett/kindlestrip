@@ -47,7 +47,7 @@
 #  1.36 - Backport of updates
 #  1.37 - Python3 support
 
-__version__ = "1.37"
+__version__ = "1.36.1"
 
 import sys
 import os
