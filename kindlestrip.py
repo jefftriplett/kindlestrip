@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# vim:fileencoding=UTF-8:ts=4:sw=4:sta:et:sts=4:ai
 #
 # This is a python script. You need a Python interpreter to run it.
 # For example, ActiveState Python, which exists for windows.
@@ -46,6 +45,7 @@
 #  1.35a- Backport of fixes from 1.32-1.35 to 1.31 to workaround latest Kindlegen changes
 #  1.36 - Backport of updates
 #  1.37 - Python3 support
+from __future__ import annotations
 
 __version__ = "1.36.1"
 
@@ -139,7 +139,7 @@ def add_cp65001_codec():
         codecs.lookup("cp65001")
     except LookupError:
         codecs.register(
-            lambda name: name == "cp65001" and codecs.lookup("utf-8") or None
+            lambda name: name == "cp65001" and codecs.lookup("utf-8") or None,
         )
     return
 
@@ -201,7 +201,7 @@ def patchdata(datain, off, new):
     dout = []
     dout.append(datain[:off])
     dout.append(new)
-    dout.append(datain[off + len(new) :])
+    dout.append(datain[off + len(new):])
     return b"".join(dout)
 
 
@@ -215,13 +215,17 @@ def joindata(datain, new):
 class SRCSStripper:
     def sec_info(self, secnum):
         start_offset, flgval = struct.unpack_from(
-            b">2L", self.datain, 78 + (secnum * 8)
+            b">2L",
+            self.datain,
+            78 + (secnum * 8),
         )
         if secnum == self.num_sections:
             next_offset = len(self.datain)
         else:
             next_offset, nflgval = struct.unpack_from(
-                b">2L", self.datain, 78 + ((secnum + 1) * 8)
+                b">2L",
+                self.datain,
+                78 + ((secnum + 1) * 8),
             )
         return start_offset, flgval, next_offset
 
@@ -230,8 +234,8 @@ class SRCSStripper:
         return self.datain[start_offset:next_offset]
 
     def __init__(self, datain):
-        if datain[0x3C : 0x3C + 8] != b"BOOKMOBI":
-            print(datain[0x3C : 0x3C + 8])
+        if datain[0x3C: 0x3C + 8] != b"BOOKMOBI":
+            print(datain[0x3C: 0x3C + 8])
             raise StripException("invalid file format")
         self.datain = datain
         (self.num_sections,) = struct.unpack(b">H", datain[76:78])
@@ -240,7 +244,11 @@ class SRCSStripper:
         mobiheader = self.loadSection(0)
 
         # get SRCS section number and count
-        self.srcs_secnum, self.srcs_cnt = struct.unpack_from(b">2L", mobiheader, 0xE0)
+        self.srcs_secnum, self.srcs_cnt = struct.unpack_from(
+            b">2L",
+            mobiheader,
+            0xE0,
+        )
         if self.srcs_secnum == 0xFFFFFFFF or self.srcs_cnt == 0:
             raise StripException("File doesn't contain the sources section.")
 
@@ -262,12 +270,15 @@ class SRCSStripper:
         self.srcs_length = next_offset - self.srcs_offset
         print("SRCS length is: 0x%x" % self.srcs_length)
 
-        if self.datain[self.srcs_offset : self.srcs_offset + 4] != b"SRCS":
+        if self.datain[self.srcs_offset: self.srcs_offset + 4] != b"SRCS":
             raise StripException("SRCS section num does not point to SRCS.")
 
         # first write out the number of sections
         self.data_file = self.datain[:76]
-        self.data_file = joindata(self.data_file, struct.pack(b">H", self.num_sections))
+        self.data_file = joindata(
+            self.data_file,
+            struct.pack(b">H", self.num_sections),
+        )
 
         # we are going to make the SRCS section lengths all  be 0
         # offsets up to and including the first srcs record must not be changed
@@ -276,7 +287,8 @@ class SRCSStripper:
             offset, flgval, temp = self.sec_info(i)
             last_offset = offset
             self.data_file = joindata(
-                self.data_file, struct.pack(b">L", offset) + struct.pack(b">L", flgval)
+                self.data_file,
+                struct.pack(b">L", offset) + struct.pack(b">L", flgval),
             )
             # print "section: %d, offset %0x, flgval %0x" % (i, offset, flgval)
 
@@ -296,7 +308,8 @@ class SRCSStripper:
             offset, flgval, temp = self.sec_info(i)
             offset += delta
             self.data_file = joindata(
-                self.data_file, struct.pack(b">L", offset) + struct.pack(b">L", flgval)
+                self.data_file,
+                struct.pack(b">L", offset) + struct.pack(b">L", flgval),
             )
             # print "section: %d, offset %0x, flgval %0x" % (i, offset, flgval)
 
@@ -304,14 +317,15 @@ class SRCSStripper:
         # typically this is 2 bytes of nulls
         first_offset, flgval = struct.unpack_from(b">2L", self.data_file, 78)
         self.data_file = joindata(
-            self.data_file, b"\0" * (first_offset - len(self.data_file))
+            self.data_file,
+            b"\0" * (first_offset - len(self.data_file)),
         )
 
         # now add on every thing up to the original src_offset and then everything after it
         dout = []
         dout.append(self.data_file)
-        dout.append(self.datain[first_offset : self.srcs_offset])
-        dout.append(self.datain[self.srcs_offset + self.srcs_length :])
+        dout.append(self.datain[first_offset: self.srcs_offset])
+        dout.append(self.datain[self.srcs_offset + self.srcs_length:])
         self.data_file = b"".join(dout)
 
         # update the srcs_secnum and srcs_cnt in the new mobiheader
@@ -340,7 +354,7 @@ class SRCSStripper:
 def usage(progname):
     print(
         f"KindleStrip {__version__}. "
-        "Written 2010-2012 by Paul Durrant and Kevin Hendricks."
+        "Written 2010-2012 by Paul Durrant and Kevin Hendricks.",
     )
     print("Strips the Sources record from Mobipocket ebooks")
     print("For ebooks generated using KindleGen 1.1 and later that add the source")
