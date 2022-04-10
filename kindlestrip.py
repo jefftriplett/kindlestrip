@@ -56,7 +56,7 @@ import struct
 import getopt
 import locale
 import codecs
-import imp
+import importlib
 
 iswindows = sys.platform.startswith("win")
 
@@ -154,7 +154,7 @@ def set_utf8_default_encoding():
         return
 
     # Regenerate setdefaultencoding.
-    imp.reload(sys)
+    importlib.reload(sys)
     sys.setdefaultencoding("utf-8")
 
     for attr in dir(locale):
