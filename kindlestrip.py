@@ -44,13 +44,14 @@
 #  1.30 - Added Support for K8 style mobis
 #  1.31 - To get K8 style mobis to work properly, need to replace SRCS section with section of 0 length
 #  1.35a- Backport of fixes from 1.32-1.35 to 1.31 to workaround latest Kindlegen changes
+#  1.36 - Backport of updates
+#  1.37 - Python3 support
 
-__version__ = "1.36"
+__version__ = "1.37"
 
 import sys
 import os
 import struct
-import binascii
 
 import getopt
 import locale
@@ -338,13 +339,13 @@ class SRCSStripper:
 
 def usage(progname):
     print(
-        "KindleStrip v%(__version__)s. "
-        "Written 2010-2012 by Paul Durrant and Kevin Hendricks." % globals()
+        f"KindleStrip {__version__}. "
+        "Written 2010-2012 by Paul Durrant and Kevin Hendricks."
     )
     print("Strips the Sources record from Mobipocket ebooks")
     print("For ebooks generated using KindleGen 1.1 and later that add the source")
     print("Usage:")
-    print("    %s [Options] <infile> <outfile>" % progname)
+    print(f"    {progname} [Options] <infile> <outfile>")
     print("Options: ")
     print(" -h  print this help message ")
     print(" -d  dump stripped SRCS records to the current working directory ")
