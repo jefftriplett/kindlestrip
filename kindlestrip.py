@@ -45,6 +45,7 @@
 #  1.35a- Backport of fixes from 1.32-1.35 to 1.31 to workaround latest Kindlegen changes
 #  1.36 - Backport of updates
 #  1.37 - Python3 support
+#  1.38  - Python3 fixes
 from __future__ import annotations
 
 __version__ = "1.38.0"
