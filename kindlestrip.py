@@ -201,7 +201,7 @@ def patchdata(datain, off, new):
     dout = []
     dout.append(datain[:off])
     dout.append(new)
-    dout.append(datain[off + len(new):])
+    dout.append(datain[off + len(new) :])
     return b"".join(dout)
 
 
@@ -234,8 +234,8 @@ class SRCSStripper:
         return self.datain[start_offset:next_offset]
 
     def __init__(self, datain):
-        if datain[0x3C: 0x3C + 8] != b"BOOKMOBI":
-            print(datain[0x3C: 0x3C + 8])
+        if datain[0x3C : 0x3C + 8] != b"BOOKMOBI":
+            print(datain[0x3C : 0x3C + 8])
             raise StripException("invalid file format")
         self.datain = datain
         (self.num_sections,) = struct.unpack(b">H", datain[76:78])
@@ -270,7 +270,7 @@ class SRCSStripper:
         self.srcs_length = next_offset - self.srcs_offset
         print("SRCS length is: 0x%x" % self.srcs_length)
 
-        if self.datain[self.srcs_offset: self.srcs_offset + 4] != b"SRCS":
+        if self.datain[self.srcs_offset : self.srcs_offset + 4] != b"SRCS":
             raise StripException("SRCS section num does not point to SRCS.")
 
         # first write out the number of sections
@@ -324,8 +324,8 @@ class SRCSStripper:
         # now add on every thing up to the original src_offset and then everything after it
         dout = []
         dout.append(self.data_file)
-        dout.append(self.datain[first_offset: self.srcs_offset])
-        dout.append(self.datain[self.srcs_offset + self.srcs_length:])
+        dout.append(self.datain[first_offset : self.srcs_offset])
+        dout.append(self.datain[self.srcs_offset + self.srcs_length :])
         self.data_file = b"".join(dout)
 
         # update the srcs_secnum and srcs_cnt in the new mobiheader
