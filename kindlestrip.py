@@ -47,7 +47,7 @@
 #  1.37 - Python3 support
 from __future__ import annotations
 
-__version__ = "1.36.1"
+__version__ = "1.37.0"
 
 import sys
 import os
