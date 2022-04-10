@@ -1,4 +1,3 @@
 build
 bumpversion
-check-manifest
-invoke
+twine
