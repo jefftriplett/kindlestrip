@@ -45,7 +45,7 @@
 #  1.31 - To get K8 style mobis to work properly, need to replace SRCS section with section of 0 length
 #  1.35a- Backport of fixes from 1.32-1.35 to 1.31 to workaround latest Kindlegen changes
 
-__version__ = '1.36'
+__version__ = "1.36"
 
 import sys
 import os
@@ -57,7 +57,7 @@ import locale
 import codecs
 import imp
 
-iswindows = sys.platform.startswith('win')
+iswindows = sys.platform.startswith("win")
 
 # Because Windows (and Mac OS X) allows full unicode filenames and paths
 # any paths in pure bytestring python 2.X code must be utf-8 encoded as they will need to
@@ -67,23 +67,26 @@ iswindows = sys.platform.startswith('win')
 # to be converted on the fly to full unicode as temporary un-named values to prevent
 # the potential mixing of unicode and bytestring string values in the main program
 
+
 def pathof(s):
     if isinstance(s, str):
         print("Warning: pathof expects utf-8 encoded byestring: ", s)
         if iswindows:
             return s
-        return s.encode('utf-8')
+        return s.encode("utf-8")
     if iswindows:
-        return s.decode('utf-8')
+        return s.decode("utf-8")
     return s
 
+
 # force string to be utf-8 encoded whether unicode or bytestring
-def utf8_str(p, enc='utf-8'):
+def utf8_str(p, enc="utf-8"):
     if isinstance(p, str):
-        return p.encode('utf-8')
-    if enc != 'utf-8':
-        return p.decode(enc).encode('utf-8')
+        return p.encode("utf-8")
+    if enc != "utf-8":
+        return p.decode(enc).encode("utf-8")
     return p
+
 
 # get sys.argv arguments and encode them into utf-8
 def utf8_argv():
@@ -111,8 +114,7 @@ def utf8_argv():
         if argc.value > 0:
             # Remove Python executable and commands if present
             start = argc.value - len(sys.argv)
-            return [argv[i].encode('utf-8') for i in
-                    range(start, argc.value)]
+            return [argv[i].encode("utf-8") for i in range(start, argc.value)]
         # this should never happen
         return None
     else:
@@ -121,42 +123,45 @@ def utf8_argv():
         if argvencoding == None:
             argvencoding = sys.getfilesystemencoding()
         if argvencoding == None:
-            argvencoding = 'utf-8'
+            argvencoding = "utf-8"
         for arg in sys.argv:
             if type(arg) == str:
-                argv.append(arg.encode('utf-8'))
+                argv.append(arg.encode("utf-8"))
             else:
-                argv.append(arg.decode(argvencoding).encode('utf-8'))
+                argv.append(arg.decode(argvencoding).encode("utf-8"))
         return argv
 
 
 # Python 2.X is broken in that it does not recognize CP65001 as UTF-8
 def add_cp65001_codec():
     try:
-        codecs.lookup('cp65001')
+        codecs.lookup("cp65001")
     except LookupError:
         codecs.register(
-            lambda name: name == 'cp65001' and codecs.lookup('utf-8') or None)
+            lambda name: name == "cp65001" and codecs.lookup("utf-8") or None
+        )
     return
+
 
 # Almost all sane operating systems now default to utf-8 (or full unicode) as the
 # proper default encoding so that all files and path names
 # in any language can be properly represented.
 
+
 def set_utf8_default_encoding():
-    if sys.getdefaultencoding() in ['utf-8', 'UTF-8','cp65001','CP65001']:
+    if sys.getdefaultencoding() in ["utf-8", "UTF-8", "cp65001", "CP65001"]:
         return
 
     # Regenerate setdefaultencoding.
     imp.reload(sys)
-    sys.setdefaultencoding('utf-8')
+    sys.setdefaultencoding("utf-8")
 
     for attr in dir(locale):
-        if attr[0:3] != 'LC_':
+        if attr[0:3] != "LC_":
             continue
         aref = getattr(locale, attr)
         try:
-            locale.setlocale(aref, '')
+            locale.setlocale(aref, "")
         except locale.Error:
             continue
         try:
@@ -165,21 +170,24 @@ def set_utf8_default_encoding():
             continue
         if lang:
             try:
-                locale.setlocale(aref, (lang, 'UTF-8'))
+                locale.setlocale(aref, (lang, "UTF-8"))
             except locale.Error:
-                os.environ[attr] = lang + '.UTF-8'
+                os.environ[attr] = lang + ".UTF-8"
     try:
-        locale.setlocale(locale.LC_ALL, '')
+        locale.setlocale(locale.LC_ALL, "")
     except locale.Error:
         pass
     return
 
+
 class Unbuffered:
     def __init__(self, stream):
         self.stream = stream
+
     def write(self, data):
         self.stream.write(data)
         self.stream.flush()
+
     def __getattr__(self, attr):
         return getattr(self.stream, attr)
 
@@ -189,52 +197,54 @@ class StripException(Exception):
 
 
 def patchdata(datain, off, new):
-    dout=[]
+    dout = []
     dout.append(datain[:off])
     dout.append(new)
-    dout.append(datain[off+len(new):])
-    return b''.join(dout)
+    dout.append(datain[off + len(new) :])
+    return b"".join(dout)
+
 
 def joindata(datain, new):
-    dout=[]
+    dout = []
     dout.append(datain)
     dout.append(new)
-    return b''.join(dout)
+    return b"".join(dout)
 
 
 class SRCSStripper:
-
     def sec_info(self, secnum):
-        start_offset, flgval = struct.unpack_from(b'>2L', self.datain, 78+(secnum*8))
+        start_offset, flgval = struct.unpack_from(
+            b">2L", self.datain, 78 + (secnum * 8)
+        )
         if secnum == self.num_sections:
             next_offset = len(self.datain)
         else:
-            next_offset, nflgval = struct.unpack_from(b'>2L', self.datain, 78+((secnum+1)*8))
+            next_offset, nflgval = struct.unpack_from(
+                b">2L", self.datain, 78 + ((secnum + 1) * 8)
+            )
         return start_offset, flgval, next_offset
 
     def loadSection(self, secnum):
         start_offset, tval, next_offset = self.sec_info(secnum)
-        return self.datain[start_offset: next_offset]
-
+        return self.datain[start_offset:next_offset]
 
     def __init__(self, datain):
-        if datain[0x3C:0x3C+8] != b'BOOKMOBI':
-            print(datain[0x3C:0x3C+8])
+        if datain[0x3C : 0x3C + 8] != b"BOOKMOBI":
+            print(datain[0x3C : 0x3C + 8])
             raise StripException("invalid file format")
         self.datain = datain
-        self.num_sections, = struct.unpack(b'>H', datain[76:78])
+        (self.num_sections,) = struct.unpack(b">H", datain[76:78])
 
         # get mobiheader
         mobiheader = self.loadSection(0)
 
         # get SRCS section number and count
-        self.srcs_secnum, self.srcs_cnt = struct.unpack_from(b'>2L', mobiheader, 0xe0)
-        if self.srcs_secnum == 0xffffffff or self.srcs_cnt == 0:
+        self.srcs_secnum, self.srcs_cnt = struct.unpack_from(b">2L", mobiheader, 0xE0)
+        if self.srcs_secnum == 0xFFFFFFFF or self.srcs_cnt == 0:
             raise StripException("File doesn't contain the sources section.")
 
         print("SRCS section number is: ", self.srcs_secnum)
         print("SRCS section count is: ", self.srcs_cnt)
-
 
         # store away srcs sections in case the user wants them later
         self.srcs_headers = []
@@ -244,61 +254,75 @@ class SRCSStripper:
             self.srcs_headers.append(data[0:16])
             self.srcs_data.append(data[16:])
 
-	# find its SRCS region starting offset and total length
+        # find its SRCS region starting offset and total length
         self.srcs_offset, fval, temp2 = self.sec_info(self.srcs_secnum)
         next = self.srcs_secnum + self.srcs_cnt
         next_offset, temp1, temp2 = self.sec_info(next)
         self.srcs_length = next_offset - self.srcs_offset
-        print("SRCS length is: 0x%x" %  self.srcs_length)
+        print("SRCS length is: 0x%x" % self.srcs_length)
 
-        if self.datain[self.srcs_offset:self.srcs_offset+4] != b'SRCS':
+        if self.datain[self.srcs_offset : self.srcs_offset + 4] != b"SRCS":
             raise StripException("SRCS section num does not point to SRCS.")
 
         # first write out the number of sections
         self.data_file = self.datain[:76]
-        self.data_file = joindata(self.data_file, struct.pack(b'>H',self.num_sections))
+        self.data_file = joindata(self.data_file, struct.pack(b">H", self.num_sections))
 
         # we are going to make the SRCS section lengths all  be 0
         # offsets up to and including the first srcs record must not be changed
         last_offset = -1
-        for i in range(self.srcs_secnum+1):
-            offset, flgval, temp  = self.sec_info(i) 
+        for i in range(self.srcs_secnum + 1):
+            offset, flgval, temp = self.sec_info(i)
             last_offset = offset
-            self.data_file = joindata(self.data_file, struct.pack(b'>L',offset) + struct.pack(b'>L',flgval))
+            self.data_file = joindata(
+                self.data_file, struct.pack(b">L", offset) + struct.pack(b">L", flgval)
+            )
             # print "section: %d, offset %0x, flgval %0x" % (i, offset, flgval)
 
         # for every additional record in SRCS records set start to last_offset (they are all zero length)
         for i in range(self.srcs_secnum + 1, self.srcs_secnum + self.srcs_cnt):
             temp1, flgval, temp2 = self.sec_info(i)
-            self.data_file = joindata(self.data_file, struct.pack(b'>L',last_offset) + struct.pack(b'>L',flgval))
+            self.data_file = joindata(
+                self.data_file,
+                struct.pack(b">L", last_offset) + struct.pack(b">L", flgval),
+            )
             # print "section: %d, offset %0x, flgval %0x" % (i, last_offset, flgval)
 
         # for every record after the SRCS records we must start it earlier by an amount
-        # equal to the total length of all of the SRCS section 
+        # equal to the total length of all of the SRCS section
         delta = 0 - self.srcs_length
-        for i in range(self.srcs_secnum + self.srcs_cnt , self.num_sections):
+        for i in range(self.srcs_secnum + self.srcs_cnt, self.num_sections):
             offset, flgval, temp = self.sec_info(i)
             offset += delta
-            self.data_file = joindata(self.data_file, struct.pack(b'>L',offset) + struct.pack(b'>L',flgval))
+            self.data_file = joindata(
+                self.data_file, struct.pack(b">L", offset) + struct.pack(b">L", flgval)
+            )
             # print "section: %d, offset %0x, flgval %0x" % (i, offset, flgval)
 
         # now pad it out to begin right at the first offset
         # typically this is 2 bytes of nulls
-        first_offset, flgval = struct.unpack_from(b'>2L', self.data_file, 78)
-        self.data_file = joindata(self.data_file, b'\0' * (first_offset - len(self.data_file)))
+        first_offset, flgval = struct.unpack_from(b">2L", self.data_file, 78)
+        self.data_file = joindata(
+            self.data_file, b"\0" * (first_offset - len(self.data_file))
+        )
 
         # now add on every thing up to the original src_offset and then everything after it
         dout = []
         dout.append(self.data_file)
-        dout.append(self.datain[first_offset: self.srcs_offset])
-        dout.append(self.datain[self.srcs_offset+self.srcs_length:])
+        dout.append(self.datain[first_offset : self.srcs_offset])
+        dout.append(self.datain[self.srcs_offset + self.srcs_length :])
         self.data_file = b"".join(dout)
 
         # update the srcs_secnum and srcs_cnt in the new mobiheader
-        offset0, flgval0 = struct.unpack_from(b'2L', self.data_file, 78)
-        offset1, flgval1 = struct.unpack_from(b'>2L', self.data_file, 86)
+        offset0, flgval0 = struct.unpack_from(b"2L", self.data_file, 78)
+        offset1, flgval1 = struct.unpack_from(b">2L", self.data_file, 86)
         mobiheader = self.data_file[offset0:offset1]
-        mobiheader = mobiheader[:0xe0]+ struct.pack(b'>L', 0xffffffff) + struct.pack(b'>L', 0) + mobiheader[0xe8:]
+        mobiheader = (
+            mobiheader[:0xE0]
+            + struct.pack(b">L", 0xFFFFFFFF)
+            + struct.pack(b">L", 0)
+            + mobiheader[0xE8:]
+        )
         self.data_file = patchdata(self.data_file, offset0, mobiheader)
         print("done")
 
@@ -313,8 +337,10 @@ class SRCSStripper:
 
 
 def usage(progname):
-    print('KindleStrip v%(__version__)s. '
-       'Written 2010-2012 by Paul Durrant and Kevin Hendricks.' % globals())
+    print(
+        "KindleStrip v%(__version__)s. "
+        "Written 2010-2012 by Paul Durrant and Kevin Hendricks." % globals()
+    )
     print("Strips the Sources record from Mobipocket ebooks")
     print("For ebooks generated using KindleGen 1.1 and later that add the source")
     print("Usage:")
@@ -348,9 +374,9 @@ def main(argv=utf8_argv()):
     infile = args[0]
     outfile = args[1]
     try:
-        data_file = open(pathof(infile), 'rb').read()
+        data_file = open(pathof(infile), "rb").read()
         strippedFile = SRCSStripper(data_file)
-        open(pathof(outfile), 'wb').write(strippedFile.getResult())
+        open(pathof(outfile), "wb").write(strippedFile.getResult())
         if DUMPSRCS:
             headers = strippedFile.getHeader()
             secdatas = strippedFile.getStrippedData()
@@ -365,14 +391,15 @@ def main(argv=utf8_argv()):
                     fname = "kindlestrip_unknown%05d.dat" % i
                 print("Stripped Record Type: ", hdr[0:4], " file: ", fname)
                 fname = "./" + fname
-                open(pathof(fname), 'wb').write(secdata)
+                open(pathof(fname), "wb").write(secdata)
 
     except StripException as e:
         print("Error: %s" % e)
         return 1
     return 0
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     add_cp65001_codec()
     set_utf8_default_encoding()
     sys.exit(main())
