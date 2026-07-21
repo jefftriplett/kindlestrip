@@ -460,7 +460,7 @@ wheels = [
 
 [[package]]
 name = "kindlestrip"
-version = "2026.7.0"
+version = "2026.7.1"
 source = { editable = "." }
 
 [package.optional-dependencies]

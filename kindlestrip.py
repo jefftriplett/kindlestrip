@@ -54,7 +54,7 @@ import struct
 import sys
 from pathlib import Path
 
-__version__ = "2026.7.0"
+__version__ = "2026.7.1"
 
 __all__ = ["SRCSStripper", "StripException", "main"]
 
