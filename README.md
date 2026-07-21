@@ -2,6 +2,17 @@
 
 A pip install-able conversion of Paul Durrant's kindlestrip library to strip the penultimate record from a Mobipocket file. (http://www.mobileread.com/forums/showthread.php?t=96903)
 
+## Scope
+
+`kindlestrip` targets **legacy `.mobi` files produced by KindleGen 1.1+**, which embed a
+compressed copy of the book's source files in an `SRCS` record — roughly doubling the file
+size. Stripping that record reclaims the space without affecting the book.
+
+This is a niche, maintenance-mode utility. Amazon has since deprecated KindleGen and moved
+away from the MOBI format (Send to Kindle no longer accepts `.mobi`), so it's most useful
+for archiving or slimming down an existing collection of older KindleGen-built `.mobi`
+files. It does nothing for EPUB or KFX.
+
 ## Usage
 
 To install:
