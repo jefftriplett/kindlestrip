@@ -1,13 +1,13 @@
-#!/usr/bin/env python
-#
-# This is a python script. You need a Python interpreter to run it.
-# For example, ActiveState Python, which exists for windows.
+#!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
 #
 # This script strips the penultimate record from a Mobipocket file.
-# This is useful because the current KindleGen add a compressed copy
+# This is useful because the current KindleGen adds a compressed copy
 # of the source files used in this record, making the ebook produced
 # about twice as big as it needs to be.
-#
 #
 # This is free and unencumbered software released into the public domain.
 #
@@ -45,229 +45,93 @@
 #  1.35a- Backport of fixes from 1.32-1.35 to 1.31 to workaround latest Kindlegen changes
 #  1.36 - Backport of updates
 #  1.37 - Python3 support
-#  1.38  - Python3 fixes
+#  1.38 - Python3 fixes
+#  1.39 - Modernized for Python 3.10+: argparse, pathlib, type hints, PEP 723
 from __future__ import annotations
 
-__version__ = "1.38.0"
-
-import sys
-import os
+import argparse
 import struct
+import sys
+from pathlib import Path
 
-import getopt
-import locale
-import codecs
-import importlib
+__version__ = "2026.7.0"
 
-iswindows = sys.platform.startswith("win")
-
-# Because Windows (and Mac OS X) allows full unicode filenames and paths
-# any paths in pure bytestring python 2.X code must be utf-8 encoded as they will need to
-# be converted on the fly to full unicode for Windows platforms.  Any other 8-bit str
-# encoding would lose characters that can not be represented in that encoding
-# these are simple support routines to allow use of utf-8 encoded bytestrings as paths in main program
-# to be converted on the fly to full unicode as temporary un-named values to prevent
-# the potential mixing of unicode and bytestring string values in the main program
-
-
-def pathof(s):
-    if isinstance(s, str):
-        print("Warning: pathof expects utf-8 encoded byestring: ", s)
-        if iswindows:
-            return s
-        return s.encode("utf-8")
-    if iswindows:
-        return s.decode("utf-8")
-    return s
-
-
-# force string to be utf-8 encoded whether unicode or bytestring
-def utf8_str(p, enc="utf-8"):
-    if isinstance(p, str):
-        return p.encode("utf-8")
-    if enc != "utf-8":
-        return p.decode(enc).encode("utf-8")
-    return p
-
-
-# get sys.argv arguments and encode them into utf-8
-def utf8_argv():
-    global iswindows
-    if iswindows:
-        # Versions 2.x of Python don't support Unicode in sys.argv on
-        # Windows, with the underlying Windows API instead replacing multi-byte
-        # characters with '?'.  So use shell32.GetCommandLineArgvW to get sys.argv
-        # as a list of Unicode strings and encode them as utf-8
-
-        from ctypes import POINTER, byref, cdll, c_int, windll
-        from ctypes.wintypes import LPCWSTR, LPWSTR
-
-        GetCommandLineW = cdll.kernel32.GetCommandLineW
-        GetCommandLineW.argtypes = []
-        GetCommandLineW.restype = LPCWSTR
-
-        CommandLineToArgvW = windll.shell32.CommandLineToArgvW
-        CommandLineToArgvW.argtypes = [LPCWSTR, POINTER(c_int)]
-        CommandLineToArgvW.restype = POINTER(LPWSTR)
-
-        cmd = GetCommandLineW()
-        argc = c_int(0)
-        argv = CommandLineToArgvW(cmd, byref(argc))
-        if argc.value > 0:
-            # Remove Python executable and commands if present
-            start = argc.value - len(sys.argv)
-            return [argv[i].encode("utf-8") for i in range(start, argc.value)]
-        # this should never happen
-        return None
-    else:
-        argv = []
-        argvencoding = sys.stdin.encoding
-        if argvencoding == None:
-            argvencoding = sys.getfilesystemencoding()
-        if argvencoding == None:
-            argvencoding = "utf-8"
-        for arg in sys.argv:
-            if type(arg) == str:
-                argv.append(arg.encode("utf-8"))
-            else:
-                argv.append(arg.decode(argvencoding).encode("utf-8"))
-        return argv
-
-
-# Python 2.X is broken in that it does not recognize CP65001 as UTF-8
-def add_cp65001_codec():
-    try:
-        codecs.lookup("cp65001")
-    except LookupError:
-        codecs.register(
-            lambda name: name == "cp65001" and codecs.lookup("utf-8") or None,
-        )
-    return
-
-
-# Almost all sane operating systems now default to utf-8 (or full unicode) as the
-# proper default encoding so that all files and path names
-# in any language can be properly represented.
-
-
-def set_utf8_default_encoding():
-    if sys.getdefaultencoding() in ["utf-8", "UTF-8", "cp65001", "CP65001"]:
-        return
-
-    # Regenerate setdefaultencoding.
-    importlib.reload(sys)
-    sys.setdefaultencoding("utf-8")
-
-    for attr in dir(locale):
-        if attr[0:3] != "LC_":
-            continue
-        aref = getattr(locale, attr)
-        try:
-            locale.setlocale(aref, "")
-        except locale.Error:
-            continue
-        try:
-            lang = locale.getlocale(aref)[0]
-        except (TypeError, ValueError):
-            continue
-        if lang:
-            try:
-                locale.setlocale(aref, (lang, "UTF-8"))
-            except locale.Error:
-                os.environ[attr] = lang + ".UTF-8"
-    try:
-        locale.setlocale(locale.LC_ALL, "")
-    except locale.Error:
-        pass
-    return
-
-
-class Unbuffered:
-    def __init__(self, stream):
-        self.stream = stream
-
-    def write(self, data):
-        self.stream.write(data)
-        self.stream.flush()
-
-    def __getattr__(self, attr):
-        return getattr(self.stream, attr)
+__all__ = ["SRCSStripper", "StripException", "main"]
 
 
 class StripException(Exception):
-    pass
+    """Raised when a Mobipocket file cannot be stripped."""
 
 
-def patchdata(datain, off, new):
-    dout = []
-    dout.append(datain[:off])
-    dout.append(new)
-    dout.append(datain[off + len(new) :])
-    return b"".join(dout)
+def patchdata(datain: bytes, off: int, new: bytes) -> bytes:
+    """Return ``datain`` with ``new`` overwriting the bytes starting at ``off``."""
+    return b"".join([datain[:off], new, datain[off + len(new) :]])
 
 
-def joindata(datain, new):
-    dout = []
-    dout.append(datain)
-    dout.append(new)
-    return b"".join(dout)
+def joindata(datain: bytes, new: bytes) -> bytes:
+    """Return ``datain`` with ``new`` appended."""
+    return b"".join([datain, new])
 
 
 class SRCSStripper:
-    def sec_info(self, secnum):
+    """Strip the SRCS (sources) records from a Mobipocket file's bytes.
+
+    The whole transformation happens in ``__init__``; the rebuilt file is
+    available via :meth:`get_result`, and the removed records via
+    :meth:`get_stripped_data` / :meth:`get_header`.
+    """
+
+    def sec_info(self, secnum: int) -> tuple[int, int, int]:
+        """Return ``(start_offset, flags, next_offset)`` for PDB record ``secnum``."""
         start_offset, flgval = struct.unpack_from(
-            b">2L",
+            ">2L",
             self.datain,
             78 + (secnum * 8),
         )
         if secnum == self.num_sections:
             next_offset = len(self.datain)
         else:
-            next_offset, nflgval = struct.unpack_from(
-                b">2L",
+            next_offset, _nflgval = struct.unpack_from(
+                ">2L",
                 self.datain,
                 78 + ((secnum + 1) * 8),
             )
         return start_offset, flgval, next_offset
 
-    def loadSection(self, secnum):
-        start_offset, tval, next_offset = self.sec_info(secnum)
+    def load_section(self, secnum: int) -> bytes:
+        """Return the raw bytes of PDB record ``secnum``."""
+        start_offset, _tval, next_offset = self.sec_info(secnum)
         return self.datain[start_offset:next_offset]
 
-    def __init__(self, datain):
+    def __init__(self, datain: bytes) -> None:
         if datain[0x3C : 0x3C + 8] != b"BOOKMOBI":
-            print(datain[0x3C : 0x3C + 8])
             raise StripException("invalid file format")
         self.datain = datain
-        (self.num_sections,) = struct.unpack(b">H", datain[76:78])
+        (self.num_sections,) = struct.unpack(">H", datain[76:78])
 
         # get mobiheader
-        mobiheader = self.loadSection(0)
+        mobiheader = self.load_section(0)
 
         # get SRCS section number and count
-        self.srcs_secnum, self.srcs_cnt = struct.unpack_from(
-            b">2L",
-            mobiheader,
-            0xE0,
-        )
+        self.srcs_secnum, self.srcs_cnt = struct.unpack_from(">2L", mobiheader, 0xE0)
         if self.srcs_secnum == 0xFFFFFFFF or self.srcs_cnt == 0:
             raise StripException("File doesn't contain the sources section.")
 
-        print("SRCS section number is: ", self.srcs_secnum)
-        print("SRCS section count is: ", self.srcs_cnt)
+        print("SRCS section number is:", self.srcs_secnum)
+        print("SRCS section count is:", self.srcs_cnt)
 
         # store away srcs sections in case the user wants them later
-        self.srcs_headers = []
-        self.srcs_data = []
+        self.srcs_headers: list[bytes] = []
+        self.srcs_data: list[bytes] = []
         for i in range(self.srcs_secnum, self.srcs_secnum + self.srcs_cnt):
-            data = self.loadSection(i)
+            data = self.load_section(i)
             self.srcs_headers.append(data[0:16])
             self.srcs_data.append(data[16:])
 
         # find its SRCS region starting offset and total length
-        self.srcs_offset, fval, temp2 = self.sec_info(self.srcs_secnum)
-        next = self.srcs_secnum + self.srcs_cnt
-        next_offset, temp1, temp2 = self.sec_info(next)
+        self.srcs_offset, _fval, _temp2 = self.sec_info(self.srcs_secnum)
+        after_srcs = self.srcs_secnum + self.srcs_cnt
+        next_offset, _temp1, _temp2 = self.sec_info(after_srcs)
         self.srcs_length = next_offset - self.srcs_offset
         print("SRCS length is: 0x%x" % self.srcs_length)
 
@@ -278,144 +142,138 @@ class SRCSStripper:
         self.data_file = self.datain[:76]
         self.data_file = joindata(
             self.data_file,
-            struct.pack(b">H", self.num_sections),
+            struct.pack(">H", self.num_sections),
         )
 
-        # we are going to make the SRCS section lengths all  be 0
-        # offsets up to and including the first srcs record must not be changed
+        # we are going to make the SRCS section lengths all be 0.
+        # offsets up to and including the first srcs record must not be changed.
         last_offset = -1
         for i in range(self.srcs_secnum + 1):
-            offset, flgval, temp = self.sec_info(i)
+            offset, flgval, _temp = self.sec_info(i)
             last_offset = offset
             self.data_file = joindata(
                 self.data_file,
-                struct.pack(b">L", offset) + struct.pack(b">L", flgval),
+                struct.pack(">L", offset) + struct.pack(">L", flgval),
             )
-            # print "section: %d, offset %0x, flgval %0x" % (i, offset, flgval)
 
-        # for every additional record in SRCS records set start to last_offset (they are all zero length)
+        # for every additional record in SRCS records set start to last_offset
+        # (they are all zero length)
         for i in range(self.srcs_secnum + 1, self.srcs_secnum + self.srcs_cnt):
-            temp1, flgval, temp2 = self.sec_info(i)
+            _temp1, flgval, _temp2 = self.sec_info(i)
             self.data_file = joindata(
                 self.data_file,
-                struct.pack(b">L", last_offset) + struct.pack(b">L", flgval),
+                struct.pack(">L", last_offset) + struct.pack(">L", flgval),
             )
-            # print "section: %d, offset %0x, flgval %0x" % (i, last_offset, flgval)
 
-        # for every record after the SRCS records we must start it earlier by an amount
-        # equal to the total length of all of the SRCS section
+        # for every record after the SRCS records we must start it earlier by an
+        # amount equal to the total length of all of the SRCS sections
         delta = 0 - self.srcs_length
         for i in range(self.srcs_secnum + self.srcs_cnt, self.num_sections):
-            offset, flgval, temp = self.sec_info(i)
+            offset, flgval, _temp = self.sec_info(i)
             offset += delta
             self.data_file = joindata(
                 self.data_file,
-                struct.pack(b">L", offset) + struct.pack(b">L", flgval),
+                struct.pack(">L", offset) + struct.pack(">L", flgval),
             )
-            # print "section: %d, offset %0x, flgval %0x" % (i, offset, flgval)
 
         # now pad it out to begin right at the first offset
         # typically this is 2 bytes of nulls
-        first_offset, flgval = struct.unpack_from(b">2L", self.data_file, 78)
+        first_offset, _flgval = struct.unpack_from(">2L", self.data_file, 78)
         self.data_file = joindata(
             self.data_file,
             b"\0" * (first_offset - len(self.data_file)),
         )
 
-        # now add on every thing up to the original src_offset and then everything after it
-        dout = []
-        dout.append(self.data_file)
-        dout.append(self.datain[first_offset : self.srcs_offset])
-        dout.append(self.datain[self.srcs_offset + self.srcs_length :])
-        self.data_file = b"".join(dout)
+        # now add on everything up to the original srcs_offset and then
+        # everything after it
+        self.data_file = b"".join(
+            [
+                self.data_file,
+                self.datain[first_offset : self.srcs_offset],
+                self.datain[self.srcs_offset + self.srcs_length :],
+            ],
+        )
 
         # update the srcs_secnum and srcs_cnt in the new mobiheader
-        offset0, flgval0 = struct.unpack_from(b"2L", self.data_file, 78)
-        offset1, flgval1 = struct.unpack_from(b">2L", self.data_file, 86)
+        offset0, _flgval0 = struct.unpack_from(">2L", self.data_file, 78)
+        offset1, _flgval1 = struct.unpack_from(">2L", self.data_file, 86)
         mobiheader = self.data_file[offset0:offset1]
         mobiheader = (
             mobiheader[:0xE0]
-            + struct.pack(b">L", 0xFFFFFFFF)
-            + struct.pack(b">L", 0)
+            + struct.pack(">L", 0xFFFFFFFF)
+            + struct.pack(">L", 0)
             + mobiheader[0xE8:]
         )
         self.data_file = patchdata(self.data_file, offset0, mobiheader)
         print("done")
 
-    def getResult(self):
+    def get_result(self) -> bytes:
+        """Return the rebuilt Mobipocket file with the SRCS records stripped."""
         return self.data_file
 
-    def getStrippedData(self):
+    def get_stripped_data(self) -> list[bytes]:
+        """Return the payloads of the stripped SRCS records."""
         return self.srcs_data
 
-    def getHeader(self):
+    def get_header(self) -> list[bytes]:
+        """Return the 16-byte headers of the stripped SRCS records."""
         return self.srcs_headers
 
 
-def usage(progname):
-    print(
-        f"KindleStrip {__version__}. "
-        "Written 2010-2012 by Paul Durrant and Kevin Hendricks.",
+def _dump_stripped_records(stripper: SRCSStripper) -> None:
+    """Write each stripped record to the current working directory."""
+    for i, (hdr, secdata) in enumerate(
+        zip(stripper.get_header(), stripper.get_stripped_data()),
+    ):
+        if hdr[0:4] == b"SRCS":
+            fname = "kindlestrip_source_archive.zip"
+        elif hdr[0:4] == b"CMET":
+            fname = "kindlestrip_build_log.txt"
+        else:
+            fname = "kindlestrip_unknown%05d.dat" % i
+        print("Stripped Record Type:", hdr[0:4].decode("latin-1"), " file:", fname)
+        Path(fname).write_bytes(secdata)
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="kindlestrip",
+        description=(
+            "Strips the Sources (SRCS) record from Mobipocket ebooks generated "
+            "using KindleGen 1.1 and later that add the source archive."
+        ),
     )
-    print("Strips the Sources record from Mobipocket ebooks")
-    print("For ebooks generated using KindleGen 1.1 and later that add the source")
-    print("Usage:")
-    print(f"    {progname} [Options] <infile> <outfile>")
-    print("Options: ")
-    print(" -h  print this help message ")
-    print(" -d  dump stripped SRCS records to the current working directory ")
+    parser.add_argument(
+        "-d",
+        "--dump",
+        action="store_true",
+        help="dump stripped SRCS records to the current working directory",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"KindleStrip {__version__}",
+    )
+    parser.add_argument("infile", type=Path, help="input Mobipocket file")
+    parser.add_argument("outfile", type=Path, help="output (stripped) file")
+    return parser
 
 
-def main(argv=utf8_argv()):
-    progname = os.path.basename(argv[0])
-    DUMPSRCS = False
+def main(argv: list[str] | None = None) -> int:
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+
     try:
-        opts, args = getopt.gnu_getopt(argv[1:], "hd")
-    except getopt.GetoptError as err:
-        print(str(err))
-        usage(progname)
-        return 2
-
-    if len(args) != 2:
-        usage(progname)
-        return 1
-
-    for o, a in opts:
-        if o == "-h":
-            usage(progname)
-            sys.exit(0)
-        if o == "-d":
-            DUMPSRCS = True
-
-    infile = args[0]
-    outfile = args[1]
-    try:
-        data_file = open(pathof(infile), "rb").read()
-        strippedFile = SRCSStripper(data_file)
-        open(pathof(outfile), "wb").write(strippedFile.getResult())
-        if DUMPSRCS:
-            headers = strippedFile.getHeader()
-            secdatas = strippedFile.getStrippedData()
-            for i in range(0, len(headers)):
-                hdr = headers[i]
-                secdata = secdatas[i]
-                if hdr[0:4] == "SRCS":
-                    fname = "kindlestrip_source_archive.zip"
-                elif hdr[0:4] == "CMET":
-                    fname = "kindlestrip_build_log.txt"
-                else:
-                    fname = "kindlestrip_unknown%05d.dat" % i
-                print("Stripped Record Type: ", hdr[0:4], " file: ", fname)
-                fname = "./" + fname
-                open(pathof(fname), "wb").write(secdata)
-
-    except StripException as e:
-        print("Error: %s" % e)
+        data_file = args.infile.read_bytes()
+        stripper = SRCSStripper(data_file)
+        args.outfile.write_bytes(stripper.get_result())
+        if args.dump:
+            _dump_stripped_records(stripper)
+    except StripException as exc:
+        print(f"Error: {exc}", file=sys.stderr)
         return 1
     return 0
 
 
 if __name__ == "__main__":
-    add_cp65001_codec()
-    set_utf8_default_encoding()
-    sys.exit(main())
+    raise SystemExit(main())
