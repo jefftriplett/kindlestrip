@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "kindlestrip"
+version = "1.38.0"
+description = "Strips the penultimate record from Mobipocket ebooks"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Unlicense"
+license-files = ["LICENSE"]
+authors = [{ name = "Paul Durrant" }]
+maintainers = [{ name = "Jeff Triplett", email = "jeff.triplett@gmail.com" }]
+keywords = ["kindle", "mobi", "mobipocket", "ebook"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Utilities",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/jefftriplett/kindlestrip"
+Source = "https://github.com/jefftriplett/kindlestrip"
+
+[project.optional-dependencies]
+dev = ["build", "bump-my-version", "pytest", "twine"]
+
+[project.scripts]
+kindlestrip = "kindlestrip:main"
+
+[tool.hatch.build.targets.wheel]
+include = ["kindlestrip.py"]
+
+[tool.hatch.build.targets.sdist]
+include = ["kindlestrip.py", "README.md", "AUTHORS.md", "LICENSE", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.bumpversion]
+current_version = "1.38.0"
+commit = true
+tag = true
+
+[[tool.bumpversion.files]]
+filename = "kindlestrip.py"
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
