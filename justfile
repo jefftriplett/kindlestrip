@@ -1,24 +1,43 @@
 @_default:
     just --list
 
+@bootstrap:
+    python -m pip install --upgrade pip uv
+    just sync
+
 @build:
-    python -m build
+    uv build
 
-@bump:
-    bump-my-version bump minor
+@bump *ARGS="patch":
+    uvx bump-my-version bump {{ ARGS }}
 
-@check:
-    twine check dist/*
+@bump-dry *ARGS="patch":
+    uvx bump-my-version bump --dry-run --verbose {{ ARGS }}
 
-@lint:
-    uvx ruff check .
-    uvx ruff format --check .
+@fmt:
+    just --fmt --unstable
 
-@pre-commit:
-    git ls-files -- . | xargs pre-commit run --config=.pre-commit-config.yaml --files
+@lint *ARGS="--all-files":
+    uv tool run prek run {{ ARGS }}
 
-@test:
-    pytest
+@lock:
+    uv lock
 
-@upload:
-    twine upload dist/*
+# Bump the CalVer version, relock, and push the tag (CI publishes to PyPI)
+release *ARGS="patch":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    just bump {{ ARGS }}
+    just lock
+    version="$(grep -m1 '^current_version' pyproject.toml | cut -d'"' -f2)"
+    git add uv.lock
+    git commit --amend --no-edit
+    git tag -d "$version"
+    git tag -a "$version" -m "$version"
+    git push --follow-tags
+
+@sync:
+    uv sync
+
+@test *ARGS:
+    uv run --with pytest --no-project pytest {{ ARGS }}

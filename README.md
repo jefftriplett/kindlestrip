@@ -50,3 +50,22 @@ $ just test    # run pytest
 $ just lint     # ruff check + format
 $ just build    # build sdist + wheel
 ```
+
+## Releasing
+
+Versions follow [CalVer](https://calver.org/) (`YYYY.MM.PATCH`) and are managed by
+[bump-my-version](https://github.com/callowayproject/bump-my-version). Releases publish to
+PyPI automatically via GitHub Actions using [Trusted
+Publishing](https://docs.pypi.org/trusted-publishers/) (OIDC — no API tokens).
+
+To cut a release:
+
+```shell
+$ just release          # bump the patch (e.g. 2026.7.0 -> 2026.7.1), commit, tag, push
+$ just release month    # start a new month (recomputes YYYY.MM from today's date)
+```
+
+`just release` bumps the version in `kindlestrip.py` and `pyproject.toml`, creates a
+commit and a bare CalVer git tag (e.g. `2026.7.1`), and runs `git push --follow-tags`.
+Pushing that tag triggers `.github/workflows/release.yml`, which builds with `uv build`
+and publishes to PyPI. Only a version tag publishes — a plain `git push` never does.

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "kindlestrip"
-version = "1.38.0"
+version = "2026.7.0"
 description = "Strips the penultimate record from Mobipocket ebooks"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -51,9 +51,21 @@ testpaths = ["tests"]
 pythonpath = ["."]
 
 [tool.bumpversion]
-current_version = "1.38.0"
+current_version = "2026.7.0"
+parse = "(?P<year>\\d+)\\.(?P<month>\\d+)\\.(?P<patch>\\d+)"
+serialize = ["{year}.{month}.{patch}"]
 commit = true
 tag = true
+tag_name = "{new_version}"
+tag_message = "{new_version}"
+message = ":bookmark: bump version {current_version} -> {new_version}"
+allow_dirty = false
+
+[tool.bumpversion.parts.year]
+calver_format = "{YYYY}"
+
+[tool.bumpversion.parts.month]
+calver_format = "{MM}"
 
 [[tool.bumpversion.files]]
 filename = "kindlestrip.py"
